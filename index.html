@@ -1,0 +1,2175 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<title>Inventario Taller</title>
+
+
+<meta name="theme-color" content="#161829">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Rubik:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+<style>
+  :root {
+    color-scheme: dark;
+    --bg: #161829;
+    --surface: #1d2036;
+    --surface-2: #262a44;
+    --surface-3: #2f3450;
+    --border: #363a58;
+    --border-strong: #474c70;
+    --text: #f2eef4;
+    --text-muted: #9b9dc0;
+    --primary: #fe9677;
+    --primary-press: #e3805f;
+    --on-primary: #33170f;
+    --success: #41436a;
+    --success-bg: #22253d;
+    --danger: #f64668;
+    --red-bg: #3a1f2b;
+    --accent: #984063;
+    --warn-bg: #33202f;
+    --radius: 14px;
+    --radius-sm: 10px;
+    --tap: 46px;
+    --shadow: 0 4px 16px rgba(0,0,0,0.35);
+    --tr-fast: 0.16s ease;
+    --tr-med: 0.28s cubic-bezier(0.33, 1, 0.68, 1);
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  select, option, input { color-scheme: dark; }
+  select { -webkit-appearance: none; appearance: none; }
+  html, body { height: 100%; background: var(--bg); }
+  body {
+    font-family: "Rubik", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    background: var(--bg); color: var(--text);
+    -webkit-font-smoothing: antialiased;
+    overscroll-behavior-y: contain;
+  }
+  .app { max-width: 640px; margin: 0 auto; min-height: 100dvh; display: flex; flex-direction: column; }
+
+  /* ============ HEADER ============ */
+  .top {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 14px 16px 12px;
+    background: linear-gradient(180deg, var(--surface-2), var(--surface));
+    border-bottom: 1px solid var(--border);
+    position: sticky; top: 0; z-index: 30;
+  }
+  .top h1 {
+    font-size: 17px; font-weight: 800; letter-spacing: 0.02em;
+    user-select: none; -webkit-user-select: none; cursor: default;
+  }
+  .top h1 .ver {
+    font-size: 10px; font-weight: 600; color: var(--text-muted);
+    margin-left: 8px; letter-spacing: 0.06em;
+  }
+  .conn-badge {
+    font-size: 10px; font-weight: 800; letter-spacing: 0.05em;
+    padding: 6px 10px; border-radius: 999px; border: 1px solid transparent;
+    background: var(--surface-3); transition: background var(--tr-fast);
+  }
+  .persona-chip {
+    font-size: 11.5px; font-weight: 800; padding: 7px 12px; border-radius: 999px;
+    background: var(--surface-3); border: 1px solid var(--border-strong); color: var(--text);
+    max-width: 130px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+    transition: border-color var(--tr-fast), background var(--tr-fast);
+  }
+  .persona-chip.set { border-color: var(--primary); background: rgba(254,150,119,0.14); }
+  .header-right { display: flex; align-items: center; gap: 8px; }
+
+  .conn-badge.online  { color: var(--success); border-color: rgba(65,67,106,0.45); }
+  .conn-badge.offline { color: var(--danger);  border-color: rgba(246,70,104,0.4); }
+  .conn-badge.pending { color: var(--accent);  border-color: rgba(152,64,99,0.45); }
+
+  /* ============ VISTA / LISTA ============ */
+  .view { flex: 1; display: flex; flex-direction: column; }
+  .view-panel { display: none; flex: 1; flex-direction: column; }
+  .view-panel.active { display: flex; }
+
+  .list-controls {
+    padding: 12px 16px 10px;
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    position: sticky; top: 57px; z-index: 20;
+  }
+  .search-row { position: relative; }
+  .search-row input {
+    width: 100%; min-height: var(--tap);
+    padding: 12px 14px; font-size: 16px;
+    background: var(--surface-2); color: var(--text);
+    border: 1px solid var(--border-strong); border-radius: var(--radius-sm);
+    transition: border-color var(--tr-fast), box-shadow var(--tr-fast);
+  }
+  .search-row input:focus {
+    outline: none; border-color: var(--primary);
+    box-shadow: 0 0 0 3px rgba(254,150,119,0.22);
+  }
+  .search-row input::placeholder { color: var(--text-muted); }
+  .suggestions {
+    position: absolute; left: 0; right: 0; top: calc(100% + 6px);
+    background: var(--surface-2); border: 1px solid var(--border-strong);
+    border-radius: var(--radius-sm); box-shadow: var(--shadow);
+    max-height: 260px; overflow-y: auto; z-index: 40; display: none;
+  }
+  .suggestions.open { display: block; animation: fadeSlide 0.18s ease; }
+  .sug-item {
+    padding: 12px 14px; font-size: 14px;
+    border-bottom: 1px solid var(--border);
+    display: flex; justify-content: space-between; gap: 8px; align-items: center;
+    cursor: pointer; transition: background var(--tr-fast);
+  }
+  .sug-item:last-child { border-bottom: none; }
+  .sug-item:active { background: var(--surface-3); }
+  .sug-item .st { font-size: 11px; font-weight: 700; }
+  .sug-item mark { background: rgba(254,150,119,0.35); color: var(--text); border-radius: 3px; padding: 0 2px; }
+
+  .mode-row {
+    display: flex; align-items: center; justify-content: space-between;
+    margin-top: 10px;
+  }
+  .toggle-group {
+    display: inline-flex; background: var(--surface-2);
+    border: 1px solid var(--border-strong); border-radius: 999px; padding: 3px;
+  }
+  .toggle-group button {
+    border: none; background: transparent; color: var(--text-muted);
+    font-size: 13px; font-weight: 700; padding: 8px 16px;
+    border-radius: 999px; min-height: 34px;
+    transition: background var(--tr-med), color var(--tr-fast);
+  }
+  .toggle-group button.active { background: var(--primary); color: var(--on-primary); }
+  .meta-info { font-size: 12px; color: var(--text-muted); }
+
+  .product-list { list-style: none; padding: 10px 16px 110px; display: flex; flex-direction: column; gap: 8px; }
+  .product-list li {
+    background: var(--surface); border: 1px solid var(--border);
+    border-left: 4px solid var(--border-strong);
+    border-radius: var(--radius-sm);
+    padding: 12px 14px;
+    display: flex; align-items: center; justify-content: space-between; gap: 10px;
+    transition: transform var(--tr-fast), border-color var(--tr-fast);
+  }
+  .product-list li:active { transform: scale(0.995); }
+  .product-list li.estado-verde    { border-left-color: var(--success); }
+  .product-list li.estado-amarillo { border-left-color: var(--accent); }
+  .product-list li.estado-rojo     { border-left-color: var(--danger); background: linear-gradient(90deg, rgba(246,70,104,0.08), transparent 40%); }
+  .product-list li.empty {
+    justify-content: center; color: var(--text-muted);
+    border-left-color: var(--border-strong); padding: 26px;
+  }
+  .product-info { flex: 1; min-width: 0; }
+  .product-name { font-size: 14.5px; font-weight: 700; line-height: 1.25; word-break: break-word; }
+  .product-name mark { background: rgba(254,150,119,0.35); color: var(--text); border-radius: 3px; padding: 0 2px; }
+  .product-qty { font-size: 12.5px; color: var(--text-muted); margin-top: 3px; }
+  .product-qty .qty-num { font-weight: 800; color: var(--text); }
+
+  .qty-actions { display: flex; gap: 8px; align-items: center; flex-shrink: 0; }
+  .qty-actions button {
+    min-width: var(--tap); min-height: var(--tap);
+    font-size: 20px; font-weight: 800;
+    border-radius: 12px; border: 1px solid var(--border-strong);
+    background: var(--surface-2); color: var(--text);
+    transition: transform var(--tr-fast), background var(--tr-fast);
+  }
+  .qty-actions button:active { transform: scale(0.92); }
+  .qty-actions .btn-minus:active { background: var(--red-bg); border-color: var(--danger); }
+  .qty-actions .btn-plus:active  { background: var(--success-bg); border-color: var(--success); }
+  .qty-actions .btn-add {
+    font-size: 13.5px; font-weight: 800; padding: 0 14px;
+    background: var(--primary); border-color: var(--primary); color: var(--on-primary);
+  }
+  .qty-actions .btn-add:active { background: var(--primary-press); }
+
+  .snapshot-banner {
+    margin: 10px 16px 0; padding: 10px 14px;
+    background: var(--warn-bg); border: 1px solid rgba(152,64,99,0.45);
+    border-radius: var(--radius-sm); font-size: 12.5px; color: var(--accent);
+  }
+
+  /* ============ BOTONES BASE ============ */
+  button {
+    font-family: inherit; cursor: pointer; border: 1px solid var(--border-strong);
+    background: var(--surface-2); color: var(--text);
+    font-size: 15px; font-weight: 700;
+    border-radius: var(--radius-sm); min-height: var(--tap); padding: 10px 16px;
+    transition: transform var(--tr-fast), background var(--tr-fast), opacity var(--tr-fast);
+  }
+  button:active { transform: scale(0.96); }
+  button:disabled { opacity: 0.5; pointer-events: none; }
+  button.primary { background: var(--primary); border-color: var(--primary); color: var(--on-primary); }
+  button.primary:active { background: var(--primary-press); }
+  button.ghost { background: transparent; }
+  button.danger { background: var(--danger); border-color: var(--danger); color: #fff; }
+
+  .row { display: flex; gap: 8px; }
+  .row input { flex: 1; }
+
+  /* ============ FAB CARRITO ============ */
+  .cart-fab {
+    position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%);
+    background: var(--primary); color: var(--on-primary); border: none;
+    border-radius: 999px; padding: 14px 26px;
+    font-size: 15px; font-weight: 800;
+    box-shadow: 0 8px 24px rgba(254,150,119,0.4);
+    display: flex; align-items: center; gap: 10px; z-index: 25;
+    transition: transform var(--tr-fast), box-shadow var(--tr-fast);
+  }
+  .cart-fab:active { transform: translateX(-50%) scale(0.95); }
+  .count-badge {
+    background: var(--on-primary); color: var(--primary);
+    font-size: 12px; font-weight: 900;
+    min-width: 22px; height: 22px; border-radius: 999px;
+    display: inline-flex; align-items: center; justify-content: center; padding: 0 6px;
+  }
+
+  /* ============ CARRITO: barra persona ============ */
+  .cart-persona-bar {
+    display: flex; align-items: center; justify-content: space-between; gap: 10px;
+    background: var(--surface-2); border: 1px solid var(--border-strong);
+    border-radius: var(--radius-sm); padding: 10px 12px; margin-bottom: 12px;
+  }
+  .cart-persona-bar .persona-label { font-size: 13px; color: var(--text-muted); }
+  .cart-persona-bar .persona-label strong { color: var(--text); font-size: 14px; }
+  .cart-persona-bar button {
+    font-size: 12px; padding: 6px 12px; min-height: 32px;
+    background: var(--primary); color: var(--on-primary); border-color: var(--primary);
+    white-space: nowrap;
+  }
+  .cart-section-header {
+    font-size: 11px; font-weight: 800; text-transform: uppercase;
+    letter-spacing: 0.08em; color: var(--text-muted);
+    padding: 10px 2px 6px; border-bottom: 1px solid var(--border);
+    margin-bottom: 6px;
+  }
+  .cart-item {
+    display: flex; align-items: center; justify-content: space-between; gap: 10px;
+    padding: 10px 2px; border-bottom: 1px solid var(--border);
+  }
+  .cart-item:last-child { border-bottom: none; }
+  .qty-stepper { display: flex; align-items: center; gap: 8px; }
+  .qty-stepper button { min-width: 36px; min-height: 36px; font-size: 17px; padding: 0; }
+  .qty-stepper .qv { min-width: 28px; text-align: center; font-weight: 800; }
+  .type-toggle { display: inline-flex; border: 1px solid var(--border-strong); border-radius: 8px; overflow: hidden; }
+  .type-toggle button { border: none; border-radius: 0; min-height: 34px; font-size: 12px; padding: 6px 10px; }
+  .type-toggle button.active-salida  { background: var(--danger); color: #fff; }
+  .type-toggle button.active-entrada { background: var(--success); color: #fff; }
+
+  /* ============ GRILLA CATEGORIAS ============ */
+  .persona-cat-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .persona-cat-btn {
+    padding: 16px 10px; font-size: 14px; font-weight: 800;
+    background: var(--surface-2); border: 1px solid var(--border-strong);
+    border-radius: var(--radius); min-height: 58px;
+    transition: transform var(--tr-fast), background var(--tr-fast), border-color var(--tr-fast);
+  }
+  .persona-cat-btn:active { background: var(--primary); border-color: var(--primary); color: var(--on-primary); transform: scale(0.96); }
+  #catNombreWrap select {
+    width: 100%; padding: 14px; font-size: 16px;
+    border: 1px solid var(--border-strong); border-radius: var(--radius-sm);
+    background: var(--surface-2); color: var(--text); min-height: var(--tap);
+  }
+
+  /* ============ ENTRADA MANUAL / INPUTS MODAL ============ */
+  .manual-entry label {
+    display: block; font-size: 11px; font-weight: 700; text-transform: uppercase;
+    letter-spacing: 0.06em; color: var(--text-muted); margin-bottom: 6px;
+  }
+  .modal input[type="text"], .modal input[type="number"] {
+    width: 100%; min-height: var(--tap); padding: 12px 14px; font-size: 16px;
+    background: var(--surface-2); color: var(--text);
+    border: 1px solid var(--border-strong); border-radius: var(--radius-sm);
+  }
+  .modal input:focus { outline: none; border-color: var(--primary); box-shadow: 0 0 0 3px rgba(254,150,119,0.22); }
+
+  .info-block {
+    background: var(--surface-2); border: 1px solid var(--border-strong);
+    border-radius: var(--radius-sm); padding: 12px 14px; font-size: 14px; margin-bottom: 12px;
+  }
+  .mono { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 13px; }
+
+  /* ============ MODALES ============ */
+  .modal-backdrop {
+    position: fixed; inset: 0; background: rgba(10,12,16,0.66);
+    display: flex; align-items: flex-end; justify-content: center; z-index: 180;
+    animation: fadeIn 0.22s ease;
+  }
+  .modal {
+    background: var(--surface); width: 100%; max-width: 640px;
+    border-radius: 20px 20px 0 0; border: 1px solid var(--border);
+    border-bottom: none; max-height: 88dvh; overflow-y: auto;
+    animation: slideUp 0.3s cubic-bezier(0.33, 1, 0.68, 1);
+  }
+  .modal-header { padding: 18px 18px 6px; }
+  .modal-header h2 { font-size: 18px; font-weight: 800; }
+  .modal-header .sub { font-size: 13px; color: var(--text-muted); margin-top: 3px; }
+  .modal-body { padding: 12px 18px; }
+  .modal-footer {
+    padding: 12px 18px calc(16px + env(safe-area-inset-bottom));
+    display: flex; gap: 10px; justify-content: flex-end;
+  }
+  .modal-footer button { flex: 1; }
+
+  .queue-item {
+    display: flex; justify-content: space-between; align-items: center; gap: 10px;
+    padding: 10px 2px; border-bottom: 1px solid var(--border); font-size: 13.5px;
+  }
+
+  /* ============ TOASTS ============ */
+  #toastRoot {
+    position: fixed; bottom: 90px; left: 50%; transform: translateX(-50%);
+    display: flex; flex-direction: column; gap: 8px; z-index: 200;
+    width: max-content; max-width: 92vw;
+  }
+  .toast {
+    padding: 12px 18px; border-radius: 12px;
+    font-size: 14px; font-weight: 700; text-align: center;
+    box-shadow: var(--shadow);
+    animation: toastIn 0.3s cubic-bezier(0.33, 1, 0.68, 1);
+  }
+  .toast.success { background: var(--success); color: #0e2a22; }
+  .toast.error   { background: var(--danger); color: #fff; }
+  .toast.info    { background: var(--surface-3); color: var(--text); border: 1px solid var(--border-strong); }
+  .toast.warn    { background: var(--accent); color: #2e2308; }
+  .toast.toast-action { display: flex; align-items: center; gap: 14px; text-align: left; }
+  .toast-action-btn {
+    background: rgba(0,0,0,0.22); border: 1px solid rgba(0,0,0,0.28);
+    color: inherit; font-weight: 800; font-size: 12px;
+    padding: 6px 12px; min-height: 30px; border-radius: 8px;
+    white-space: nowrap; flex-shrink: 0;
+  }
+
+  .spinner {
+    display: inline-block; width: 14px; height: 14px;
+    border: 2px solid rgba(255,255,255,0.35); border-top-color: #fff;
+    border-radius: 50%; animation: spin 0.7s linear infinite; vertical-align: -2px;
+  }
+
+  /* ============ JUEGO 2048 ============ */
+  .game-overlay {
+    position: fixed; inset: 0; background: var(--bg); z-index: 300;
+    display: flex; flex-direction: column; align-items: center;
+    padding: 16px; overflow-y: auto;
+    animation: fadeIn 0.25s ease;
+  }
+  .game-top {
+    width: 100%; max-width: 420px;
+    display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px;
+  }
+  .game-title { font-size: 22px; font-weight: 900; letter-spacing: 0.02em; }
+  .game-title span { color: var(--primary); }
+  .game-scores { display: flex; gap: 8px; }
+  .score-box {
+    background: var(--surface-2); border: 1px solid var(--border-strong);
+    border-radius: 10px; padding: 6px 14px; text-align: center; min-width: 74px;
+  }
+  .score-box .lbl { font-size: 9px; font-weight: 800; letter-spacing: 0.08em; color: var(--text-muted); text-transform: uppercase; }
+  .score-box .val { font-size: 17px; font-weight: 900; }
+  .game-sub {
+    width: 100%; max-width: 420px; display: flex;
+    align-items: center; justify-content: space-between; margin-bottom: 12px;
+  }
+  .game-player { font-size: 13px; color: var(--text-muted); }
+  .game-player strong { color: var(--text); }
+  .game-sub .g-actions { display: flex; gap: 8px; }
+  .g-btn {
+    font-size: 12px; font-weight: 800; padding: 8px 14px; min-height: 36px;
+    border-radius: 8px;
+  }
+  .game-board {
+    position: relative; width: 100%; max-width: 420px; aspect-ratio: 1;
+    background: var(--surface); border: 1px solid var(--border-strong);
+    border-radius: 14px; padding: 8px;
+    display: grid; grid-template-columns: repeat(4, 1fr);
+    grid-template-rows: repeat(4, 1fr); gap: 8px;
+    touch-action: none; user-select: none; -webkit-user-select: none;
+  }
+  .cell { background: var(--surface-2); border-radius: 10px; }
+  .tile {
+    position: absolute; top: 0; left: 0;
+    display: flex; align-items: center; justify-content: center;
+    font-weight: 800; border-radius: 10px;
+    transition: transform 0.14s cubic-bezier(0.25, 0.6, 0.35, 1);
+    will-change: transform;
+  }
+  .tile.new    { animation: tilePop 0.2s cubic-bezier(0.33, 1.4, 0.6, 1); }
+  .tile.merged { animation: tileMerge 0.22s cubic-bezier(0.33, 1.4, 0.6, 1); }
+  .t2    { background: #363a58; color: var(--text); }
+  .t4    { background: #454a6e; color: var(--text); }
+  .t8    { background: #41436a; color: #fff; }
+  .t16   { background: #5b3a68; color: #fff; }
+  .t32   { background: #984063; color: #fff; }
+  .t64   { background: #b93a5e; color: #fff; }
+  .t128  { background: #f64668; color: #fff; }
+  .t256  { background: #fa5c56; color: #fff; }
+  .t512  { background: #fe9677; color: #33170f; }
+  .t1024 { background: #ffb495; color: #33170f; }
+  .t2048 { background: #ffdcbc; color: #33170f; box-shadow: 0 0 22px rgba(254,150,119,0.6); }
+  .tsuper{ background: #fff2e2; color: #33170f; box-shadow: 0 0 26px rgba(254,150,119,0.75); }
+
+  .game-panel {
+    position: absolute; inset: 0; border-radius: 14px;
+    background: rgba(20,18,15,0.93);
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    gap: 12px; padding: 22px; text-align: center;
+    animation: fadeIn 0.3s ease; z-index: 5;
+  }
+  .game-panel h3 { font-size: 22px; font-weight: 900; }
+  .game-panel .final-score { font-size: 15px; color: var(--text-muted); }
+  .game-panel .final-score strong { color: var(--text); font-size: 19px; }
+  .top3 { width: 100%; max-width: 280px; display: flex; flex-direction: column; gap: 6px; margin: 4px 0; }
+  .top3-row {
+    display: flex; justify-content: space-between; align-items: center;
+    background: var(--surface-2); border: 1px solid var(--border-strong);
+    border-radius: 8px; padding: 8px 14px; font-size: 13.5px; font-weight: 700;
+  }
+  .top3-row .pos { color: var(--accent); font-weight: 900; margin-right: 8px; }
+  .top3-note { font-size: 11.5px; color: var(--text-muted); max-width: 280px; line-height: 1.4; }
+  .game-name-form { display: flex; flex-direction: column; gap: 10px; width: 100%; max-width: 300px; }
+  .game-name-form input {
+    width: 100%; min-height: var(--tap); padding: 12px 14px; font-size: 16px;
+    background: var(--surface-2); color: var(--text);
+    border: 1px solid var(--border-strong); border-radius: var(--radius-sm); text-align: center;
+  }
+
+  /* ============ MODO ESCANEO NFC (Android) ============ */
+  .nfc-btn {
+    font-size: 11px; font-weight: 800; letter-spacing: 0.05em;
+    padding: 7px 12px; border-radius: 999px;
+    background: var(--primary); color: var(--on-primary); border: none;
+  }
+  .scan-overlay {
+    position: fixed; inset: 0; background: var(--bg); z-index: 150;
+    display: flex; flex-direction: column; align-items: center;
+    padding: 20px 16px calc(20px + env(safe-area-inset-bottom));
+    animation: fadeIn 0.25s ease;
+  }
+  .scan-head {
+    width: 100%; max-width: 480px;
+    display: flex; align-items: center; justify-content: space-between;
+    margin-bottom: 6px;
+  }
+  .scan-title { font-size: 18px; font-weight: 900; }
+  .scan-persona { font-size: 12.5px; color: var(--text-muted); margin-bottom: 18px; width: 100%; max-width: 480px; }
+  .scan-persona strong { color: var(--text); }
+  .scan-zone {
+    width: 170px; height: 170px; border-radius: 50%;
+    border: 2px dashed var(--border-strong);
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    gap: 8px; margin: 10px 0 6px;
+    animation: scanPulse 1.8s ease-in-out infinite;
+  }
+  .scan-zone .zlbl { font-size: 12px; color: var(--text-muted); font-weight: 700; text-align: center; padding: 0 18px; }
+  .scan-count {
+    font-size: 13px; font-weight: 800; color: var(--text-muted); margin: 10px 0 4px;
+  }
+  .scan-count strong { color: var(--primary); font-size: 16px; }
+  .scan-feed {
+    width: 100%; max-width: 480px; flex: 1; overflow-y: auto;
+    display: flex; flex-direction: column; gap: 6px; padding: 8px 0;
+  }
+  .scan-feed-item {
+    background: var(--surface); border: 1px solid var(--border);
+    border-left: 3px solid var(--success);
+    border-radius: var(--radius-sm); padding: 9px 12px;
+    font-size: 13px; font-weight: 600;
+    display: flex; justify-content: space-between; gap: 8px;
+    animation: fadeSlide 0.2s ease;
+  }
+  .scan-feed-item.persona { border-left-color: var(--primary); }
+  .scan-feed-item.dup { border-left-color: var(--accent); opacity: 0.75; }
+  .scan-feed-item .sfi-meta { color: var(--text-muted); font-weight: 700; white-space: nowrap; }
+  .scan-actions {
+    width: 100%; max-width: 480px; display: flex; gap: 10px; margin-top: 8px;
+  }
+  .scan-actions button { flex: 1; }
+  @keyframes scanPulse {
+    0%, 100% { border-color: var(--border-strong); transform: scale(1); }
+    50% { border-color: var(--primary); transform: scale(1.03); }
+  }
+
+  /* ============ ANIMACIONES ============ */
+  @keyframes fadeIn   { from { opacity: 0; } to { opacity: 1; } }
+  @keyframes fadeSlide{ from { opacity: 0; transform: translateY(-4px); } to { opacity: 1; transform: none; } }
+  @keyframes slideUp  { from { transform: translateY(40px); opacity: 0.4; } to { transform: none; opacity: 1; } }
+  @keyframes toastIn  { from { transform: translateY(14px); opacity: 0; } to { transform: none; opacity: 1; } }
+  @keyframes spin     { to { transform: rotate(360deg); } }
+  @keyframes tilePop  { from { transform: scale(0.4); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+  @keyframes tileMerge{ 0% { transform: scale(1); } 45% { transform: scale(1.18); } 100% { transform: scale(1); } }
+</style>
+</head>
+<body>
+<div class="app">
+
+  <header class="top">
+    <h1 id="appLogo">Inventario · Taller<span class="ver" id="appVersion"></span></h1>
+    <div class="header-right">
+      <button id="nfcBtn" class="nfc-btn" type="button" style="display:none;">NFC</button>
+      <button id="personaChip" class="persona-chip" type="button" style="display:none;"></button>
+      <button id="connBadge" class="conn-badge online" type="button">●</button>
+    </div>
+  </header>
+
+  <main class="view">
+    <section id="panelList" class="view-panel active">
+      <div id="snapshotBanner" class="snapshot-banner" style="display:none;"></div>
+      <div class="list-controls">
+        <div class="search-row">
+          <input id="searchInput" type="text" placeholder="Buscar por nombre o código..." autocomplete="off" autocorrect="off" autocapitalize="off">
+          <div class="suggestions" id="suggestions"></div>
+        </div>
+        <div class="mode-row">
+          <div class="toggle-group" id="modeToggle">
+            <button data-mode="directo" class="active">Directo</button>
+            <button data-mode="carrito">Carrito</button>
+          </div>
+          <span class="meta-info" id="listMeta">— productos</span>
+        </div>
+      </div>
+      <ul class="product-list" id="productList"></ul>
+    </section>
+  </main>
+
+  <button id="cartFab" class="cart-fab" style="display:none;">
+    Carrito
+    <span class="count-badge" id="cartCount">0</span>
+  </button>
+</div>
+
+<div id="modalRoot"></div>
+<div id="toastRoot"></div>
+
+<script>
+/* ============ CONFIG ============ */
+const GAS_URL = "https://script.google.com/macros/s/AKfycbySbapI4sGFrqb_5hzQZILx1djU8H8txgmdF0IZJHZ8zZci7xicpFORYdcYzfZre1y5/exec";
+const CART_KEY = "inventario_carrito_v1";
+const SNAPSHOT_KEY = "inventario_snapshot_v1";
+const QUEUE_KEY = "inventario_queue_v1";
+const LONG_PRESS_MS = 500;
+const FETCH_TIMEOUT_MS = 25000;
+const RETRY_INTERVAL_MS = 30000;
+const MAX_SUGGESTIONS = 8;
+
+/* ============ STATE ============ */
+const state = {
+  inventario: [],
+  filtro: "",
+  modoLista: "directo",
+  carrito: loadJSON(CART_KEY, []),
+  queue: loadJSON(QUEUE_KEY, []),
+  personaActiva: "",          // nombre libre, "" = Sin asignar
+  snapshotTs: null,
+  scanner: null,
+  scanning: false,
+  ultimoEscaneo: { codigo: null, ts: 0 }
+};
+
+/* ============ STORAGE ============ */
+function loadJSON(key, def) {
+  try { const r = localStorage.getItem(key); return r ? JSON.parse(r) : def; }
+  catch { return def; }
+}
+function saveJSON(key, val) { localStorage.setItem(key, JSON.stringify(val)); }
+function saveCart() { saveJSON(CART_KEY, state.carrito); }
+function saveQueue() { saveJSON(QUEUE_KEY, state.queue); }
+function saveSnapshot() {
+  const snap = { ts: Date.now(), items: state.inventario };
+  saveJSON(SNAPSHOT_KEY, snap); state.snapshotTs = snap.ts;
+}
+function loadSnapshot() {
+  const s = loadJSON(SNAPSHOT_KEY, null);
+  if (s) state.snapshotTs = s.ts;
+  return s;
+}
+
+/* ============ API ============ */
+async function api(action, params = {}) {
+  const url = new URL(GAS_URL);
+  url.searchParams.set("action", action);
+  for (const [k, v] of Object.entries(params)) url.searchParams.set(k, v);
+  url.searchParams.set("_t", Date.now());
+  const ctl = new AbortController();
+  const tid = setTimeout(() => ctl.abort(), FETCH_TIMEOUT_MS);
+  try {
+    const res = await fetch(url.toString(), { method: "GET", redirect: "follow", signal: ctl.signal });
+    if (!res.ok) throw new Error("HTTP " + res.status);
+    return await res.json();
+  } finally { clearTimeout(tid); }
+}
+
+/* ============ TOASTS ============ */
+function toast(msg, kind = "info", ms = 2200) {
+  const root = document.getElementById("toastRoot");
+  const el = document.createElement("div");
+  el.className = "toast " + kind;
+  el.textContent = msg;
+  root.appendChild(el);
+  setTimeout(() => el.remove(), ms);
+}
+
+/* Toast con botón de acción (usado para "Deshacer") */
+function toastAction(msg, kind, actionLabel, onAction, ms = 8000) {
+  const root = document.getElementById("toastRoot");
+  const el = document.createElement("div");
+  el.className = "toast " + kind + " toast-action";
+
+  const span = document.createElement("span");
+  span.textContent = msg;
+
+  const btn = document.createElement("button");
+  btn.textContent = actionLabel;
+  btn.className = "toast-action-btn";
+  btn.addEventListener("click", () => {
+    el.remove();
+    onAction();
+  });
+
+  el.appendChild(span);
+  el.appendChild(btn);
+  root.appendChild(el);
+  const timer = setTimeout(() => el.remove(), ms);
+  return () => { clearTimeout(timer); el.remove(); }; // permite cerrar manualmente
+}
+
+/* Maneja el deshacer de un movimiento reciente */
+async function performUndo(fila, codigo, producto) {
+  try {
+    const r = await api("undo", { fila, codigo });
+    if (r.ok) {
+      // Sincronizar stock local si el producto está en la lista cargada
+      const itemRef = state.inventario.find(x => x.codigo === codigo);
+      if (itemRef) { itemRef.cantidad = r.stockRestaurado; saveSnapshot(); renderList(); }
+      toast(`Deshecho: ${producto} · Stock: ${r.stockRestaurado}`, "success", 2000);
+      if (navigator.vibrate) navigator.vibrate([40, 30, 40]);
+    } else {
+      toast(r.error || "No se pudo deshacer", "error", 3000);
+    }
+  } catch (e) {
+    toast("Sin conexión, no se pudo deshacer", "error", 2500);
+  }
+}
+
+/* ============ LOOKUP ============ */
+async function lookupAndOpenMovementModal(codigo, opts = {}) {
+  if (!navigator.onLine) return lookupOffline(codigo, opts);
+  try {
+    const r = await api("lookup", { codigo });
+    if (r.ok) openMovementModal(r.item, codigo, opts);
+    else if (r.notFound) openNotFoundModal(codigo);
+    else toast(r.error || "Error", "error");
+  } catch (e) {
+    setOnline(false);
+    lookupOffline(codigo, opts);
+  }
+}
+function lookupOffline(codigo, opts = {}) {
+  const snap = loadSnapshot();
+  if (!snap) { toast("Sin conexión y sin datos cacheados", "error", 3000); return; }
+  const item = snap.items.find(it => String(it.codigo).trim() === String(codigo).trim());
+  if (item) { toast("Modo offline · datos cacheados", "warn", 1500); openMovementModal(item, codigo, opts); }
+  else openNotFoundModal(codigo);
+}
+
+/* ============ MODAL: MOVIMIENTO ============ */
+function openMovementModal(item, codigo, opts = {}) {
+  const tipoInicial = opts.tipoInicial === "entrada" ? "entrada" : "salida";
+  const cantidadInicial = Math.max(1, Number(opts.cantidadInicial) || 1);
+  const personaLineHtml = state.personaActiva
+    ? `<div class="info-block" id="modalPersonaLine" style="display:flex;align-items:center;justify-content:space-between;padding:9px 12px;margin-bottom:10px;">
+         <span style="font-size:12.5px;color:var(--text-muted);">Registrando a <strong style="color:var(--text);">${esc(state.personaActiva)}</strong></span>
+         <button class="ghost" id="btnPersonaInline" style="font-size:11px;padding:5px 10px;min-height:28px;">Cambiar</button>
+       </div>`
+    : `<button class="ghost" id="btnPersonaInline" style="width:100%;font-size:12.5px;padding:8px;min-height:34px;margin-bottom:10px;">+ Asignar persona (opcional)</button>`;
+  const tpl = `
+    <div class="modal-header">
+      <h2>${esc(item.producto)}</h2>
+      <div class="sub mono">Código: ${esc(codigo)}</div>
+    </div>
+    <div class="modal-body">
+      ${personaLineHtml}
+      <div class="info-block">
+        <div class="row"><span class="label">Stock actual</span><span class="val mono">${item.cantidad} ${esc(item.unidad || "")}</span></div>
+        <div class="row"><span class="label">Crítico / Bajo</span><span class="val mono">${item.critico} / ${item.bajo}</span></div>
+        ${item.ubicacion ? `<div class="row"><span class="label">Ubicación</span><span class="val">${esc(item.ubicacion)}</span></div>` : ""}
+      </div>
+      <div class="type-toggle" id="typeToggle">
+        <button class="${tipoInicial === "salida" ? "active " : ""}salida" data-tipo="salida">↓ Salida</button>
+        <button class="${tipoInicial === "entrada" ? "active " : ""}entrada" data-tipo="entrada">↑ Entrada</button>
+      </div>
+      <label style="font-size:12px;color:var(--text-muted);font-weight:600;text-transform:uppercase;letter-spacing:0.05em;display:block;margin-bottom:6px;">Cantidad</label>
+      <div class="qty-stepper">
+        <button data-step="-1">−</button>
+        <input id="qtyInput" type="number" min="1" value="${cantidadInicial}" inputmode="numeric">
+        <button data-step="+1">+</button>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="ghost" data-close>Cancelar</button>
+      <button class="primary" id="btnConfirmMove">Confirmar</button>
+    </div>`;
+  const modal = openModal(tpl);
+  let tipo = tipoInicial;
+  modal.querySelectorAll("#typeToggle button").forEach(b => {
+    b.addEventListener("click", () => {
+      tipo = b.dataset.tipo;
+      modal.querySelectorAll("#typeToggle button").forEach(x => x.classList.remove("active"));
+      b.classList.add("active");
+    });
+  });
+  const qtyInput = modal.querySelector("#qtyInput");
+  modal.querySelectorAll("[data-step]").forEach(b => {
+    b.addEventListener("click", () => {
+      const cur = Number(qtyInput.value) || 0;
+      qtyInput.value = Math.max(1, cur + Number(b.dataset.step));
+    });
+  });
+  vigilarBotonConfirmar(modal.querySelector("#btnConfirmMove"), "Confirmar");
+
+  const personaBtn = modal.querySelector("#btnPersonaInline");
+  if (personaBtn) {
+    personaBtn.addEventListener("click", () => {
+      const qtyActual = Number(qtyInput.value) || cantidadInicial;
+      openChangePersonaModal(() => {
+        closeModalSpecific(modal);
+        openMovementModal(item, codigo, { cantidadInicial: qtyActual, tipoInicial: tipo });
+      });
+    });
+  }
+  modal.querySelector("#btnConfirmMove").addEventListener("click", async () => {
+    const cantidad = Number(qtyInput.value);
+    if (!cantidad || cantidad <= 0) { toast("Cantidad inválida", "error"); return; }
+    if (confirmCooldownRestante() > 0) return;   // boton en enfriamiento
+    const btn = modal.querySelector("#btnConfirmMove");
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner"></span> ...';
+    const result = await tryMove(codigo, tipo, cantidad, item, state.personaActiva || "");
+    if (result.success) {
+      marcarConfirm();
+      touchPersonaActivity();
+      if (navigator.vibrate) navigator.vibrate([60,40,60]);
+      closeModal();
+      if (result.queued) {
+        toast(`En cola · Stock: ${result.stockEstimado}`, "warn", 1800);
+      } else {
+        const txt = `✓ ${item.producto} ${tipo === "entrada" ? "+" : "−"}${cantidad} · Stock: ${result.stockNuevo}`;
+        if (result.filaMovimiento) {
+          toastAction(txt, "success", "Deshacer", () => {
+            performUndo(result.filaMovimiento, result.codigo, item.producto);
+          });
+        } else {
+          toast(txt, "success", 1800);
+        }
+      }
+    } else {
+      toast(result.error, "error", 3000);
+      btn.disabled = false;
+      btn.textContent = "Confirmar";
+    }
+  });
+}
+
+function openNotFoundModal(codigo) {
+  const tpl = `
+    <div class="modal-header">
+      <h2>Código no registrado</h2>
+      <div class="sub mono">${esc(codigo)}</div>
+    </div>
+    <div class="modal-body">
+      <p style="margin:0 0 12px;font-size:14px;color:var(--text-muted);">
+        Este código no existe en el inventario. Se puede guardar en <strong>Pendientes</strong> para revisarlo.
+      </p>
+    </div>
+    <div class="modal-footer">
+      <button class="ghost" data-close>Descartar</button>
+      <button class="primary" id="btnSavePending">Guardar pendiente</button>
+    </div>`;
+  const modal = openModal(tpl);
+  modal.querySelector("#btnSavePending").addEventListener("click", async () => {
+    if (!navigator.onLine) {
+      enqueue("pending", { codigo, tipo: "lookup", cantidad: 0 });
+      toast("En cola (sin conexión)", "warn"); closeModal(); return;
+    }
+    try {
+      await api("pending", { codigo, tipo: "lookup", cantidad: 0 });
+      toast("Guardado en Pendientes", "success"); closeModal();
+    } catch {
+      enqueue("pending", { codigo, tipo: "lookup", cantidad: 0 });
+      toast("En cola (sin conexión)", "warn"); closeModal();
+    }
+  });
+}
+
+/* ============ MOVE CON QUEUE ============ */
+async function tryMove(codigo, tipo, cantidad, itemRef, solicitante = "") {
+  if (itemRef && tipo === "salida" && itemRef.cantidad - cantidad < 0) {
+    return { success: false, error: `Stock insuficiente. Disponible: ${itemRef.cantidad}` };
+  }
+  // opId unico: si la red falla DESPUES de que el servidor escribio,
+  // el reintento lleva el mismo id y el backend lo ignora (no duplica)
+  const opId = newOpId();
+  if (!navigator.onLine) return queueMoveAndOptimistic(codigo, tipo, cantidad, itemRef, solicitante, opId);
+  try {
+    const r = await api("move", { codigo, tipo, cantidad, solicitante, opId });
+    if (r.ok && !r.apiV) avisarBackendViejo();
+    if (r.ok) {
+      if (itemRef) { itemRef.cantidad = r.stockNuevo; saveSnapshot(); }
+      return { success: true, stockNuevo: r.stockNuevo, filaMovimiento: r.filaMovimiento, codigo };
+    }
+    if (r.stockInsuficiente) return { success: false, error: `Stock insuficiente. Disponible: ${r.stockAnterior}` };
+    if (r.notFound) return { success: false, error: "Código no encontrado" };
+    return { success: false, error: r.error || "Error" };
+  } catch (e) {
+    setOnline(false);
+    return queueMoveAndOptimistic(codigo, tipo, cantidad, itemRef, solicitante, opId);
+  }
+}
+
+function queueMoveAndOptimistic(codigo, tipo, cantidad, itemRef, solicitante = "", opId = null) {
+  enqueue("move", { codigo, tipo, cantidad, solicitante, opId: opId || newOpId() });
+  let stockEstimado = null;
+  if (itemRef) {
+    itemRef.cantidad += (tipo === "entrada" ? cantidad : -cantidad);
+    stockEstimado = itemRef.cantidad;
+    saveSnapshot();
+    renderList();
+  }
+  return { success: true, queued: true, stockEstimado };
+}
+
+/* ============ QUEUE ============ */
+let _avisoBackend = false;
+function avisarBackendViejo() {
+  if (_avisoBackend) return;
+  _avisoBackend = true;
+  toast("El backend no está actualizado: falta redesplegar Code.gs (Nueva versión)", "error", 6000);
+}
+
+function newOpId() {
+  return Date.now().toString(36) + "_" + Math.random().toString(36).slice(2, 9);
+}
+
+function enqueue(action, params) {
+  // Relee de localStorage: otra pestaña pudo haber encolado algo.
+  // Sin esto, guardar la copia en memoria borraria lo del otro tab.
+  const actual = loadJSON(QUEUE_KEY, []);
+  actual.push({
+    id: Date.now() + "_" + Math.random().toString(36).slice(2,7),
+    action, params, ts: Date.now()
+  });
+  state.queue = actual;
+  saveQueue(); updateConnBadge();
+}
+function dequeue(id) {
+  // Relee antes de filtrar para no resucitar items que otra pestaña saco
+  const actual = loadJSON(QUEUE_KEY, []);
+  state.queue = actual.filter(q => q.id !== id);
+  saveQueue(); updateConnBadge();
+}
+async function flushQueue() {
+  // Releer de localStorage: otra pestaña pudo haber vaciado items
+  state.queue = loadJSON(QUEUE_KEY, []);
+  if (state.queue.length === 0) return { exitos: 0, fallos: 0, detalleFallos: [] };
+  if (!navigator.onLine) return { exitos: 0, fallos: 0, offline: true, detalleFallos: [] };
+  let exitos = 0, fallos = 0, duplicados = 0;
+  const detalleFallos = [];
+  const copia = [...state.queue];
+  for (const op of copia) {
+    refreshSyncLock();   // colas largas no deben perder el lock a mitad
+    try {
+      const r = await api(op.action, op.params);
+      if (r.ok) { dequeue(op.id); exitos++; if (r.duplicate) duplicados++; }
+      else {
+        // Error de negocio: registramos motivo y lo sacamos de la cola
+        dequeue(op.id);
+        fallos++;
+        detalleFallos.push({
+          op,
+          motivo: r.stockInsuficiente
+            ? `Stock insuficiente (disponible: ${r.stockAnterior})`
+            : (r.notFound ? "Código no encontrado" : (r.error || "Error desconocido"))
+        });
+      }
+    } catch { break; }  // red caída: dejamos el resto en cola para reintentar
+  }
+  return { exitos, fallos, duplicados, detalleFallos };
+}
+
+/* ============ ONLINE / OFFLINE ============ */
+function setOnline(ok) {
+  if (ok && state.queue.length > 0) autoSync();
+  updateConnBadge();
+}
+function updateConnBadge() {
+  const b = document.getElementById("connBadge");
+  if (!navigator.onLine) {
+    b.className = "conn-badge offline";
+    b.textContent = "● OFFLINE" + (state.queue.length ? ` (${state.queue.length})` : "");
+  } else if (state.queue.length > 0) {
+    b.className = "conn-badge pending";
+    b.textContent = `● PENDIENTES (${state.queue.length})`;
+  } else {
+    b.className = "conn-badge online";
+    b.textContent = "● ONLINE";
+  }
+}
+/* ============ LOCK ENTRE PESTAÑAS ============
+ * Varias pestañas comparten la cola en localStorage. Sin este lock,
+ * dos pestañas pueden enviar la misma operacion a la vez. */
+const SYNC_LOCK_KEY = "inv_sync_lock_v1";
+const SYNC_LOCK_TTL = 90000;
+const TAB_ID = Math.random().toString(36).slice(2, 10);
+
+function acquireSyncLock() {
+  try {
+    const raw = localStorage.getItem(SYNC_LOCK_KEY);
+    if (raw) {
+      const l = JSON.parse(raw);
+      if (l && l.owner !== TAB_ID && (Date.now() - l.ts) < SYNC_LOCK_TTL) return false;
+    }
+    localStorage.setItem(SYNC_LOCK_KEY, JSON.stringify({ owner: TAB_ID, ts: Date.now() }));
+    // Relectura: si otra pestaña gano la carrera, cedemos
+    const check = JSON.parse(localStorage.getItem(SYNC_LOCK_KEY) || "null");
+    return !!(check && check.owner === TAB_ID);
+  } catch (e) { return true; }
+}
+function refreshSyncLock() {
+  try {
+    const l = JSON.parse(localStorage.getItem(SYNC_LOCK_KEY) || "null");
+    if (l && l.owner === TAB_ID) {
+      localStorage.setItem(SYNC_LOCK_KEY, JSON.stringify({ owner: TAB_ID, ts: Date.now() }));
+    }
+  } catch (e) {}
+}
+function releaseSyncLock() {
+  try {
+    const l = JSON.parse(localStorage.getItem(SYNC_LOCK_KEY) || "null");
+    if (l && l.owner === TAB_ID) localStorage.removeItem(SYNC_LOCK_KEY);
+  } catch (e) {}
+}
+
+let _syncing = false;
+async function autoSync() {
+  if (_syncing) return;
+  if (!acquireSyncLock()) return;   // otra pestaña ya esta sincronizando
+  _syncing = true;
+  try {
+    const r = await flushQueue();
+    if (r.exitos > 0) {
+      const dup = r.duplicados
+        ? ` (${r.duplicados} ya estaban registradas)` : "";
+      toast(`✓ Sincronizadas ${r.exitos}${dup}`, "success");
+    }
+    if (r.fallos > 0) {
+      // Mostrar detalle del primer fallo (los demás quedan en consola)
+      const primerFallo = r.detalleFallos[0];
+      const codigo = primerFallo.op.params.codigo || primerFallo.op.params.persona || primerFallo.op.action;
+      toast(`${r.fallos} fallaron. ${codigo}: ${primerFallo.motivo}`, "error", 5000);
+      console.warn("Detalle de operaciones fallidas:", r.detalleFallos);
+    }
+    if (r.exitos > 0 || r.fallos > 0) refreshList();
+  } finally { _syncing = false; releaseSyncLock(); updateConnBadge(); }
+}
+window.addEventListener("online", () => { setOnline(true); toast("Conexión recuperada", "success", 1500); });
+
+/* La cola ya no depende solo del evento "online": el navegador puede
+   creer que hay red (WiFi de planta sin salida) y ese evento nunca dispara.
+   Reintento periodico + al volver la app a primer plano. */
+setInterval(() => {
+  if (state.queue.length > 0 && !_syncing && navigator.onLine) autoSync();
+}, RETRY_INTERVAL_MS);
+
+document.addEventListener("visibilitychange", () => {
+  if (!document.hidden && state.queue.length > 0 && !_syncing && navigator.onLine) autoSync();
+});
+window.addEventListener("offline", () => { setOnline(false); toast("Sin conexión - modo offline", "warn", 2000); });
+document.getElementById("connBadge").addEventListener("click", openQueueModal);
+
+function openQueueModal() {
+  let bodyHtml;
+  if (state.queue.length === 0) {
+    bodyHtml = '<div class="empty">No hay operaciones pendientes</div>';
+  } else {
+    bodyHtml = state.queue.map(op => {
+      const p = op.params;
+      const isMove = op.action === "move";
+      const delta = isMove ? `${p.tipo === "entrada" ? "+" : "−"}${p.cantidad}` : "—";
+      const klass = isMove ? p.tipo : "";
+      return `
+        <div class="queue-item">
+          <div class="info">
+            <div class="mono">${esc(p.codigo)}</div>
+            <div class="ts">${new Date(op.ts).toLocaleString()} · ${op.action}</div>
+          </div>
+          <span class="delta ${klass}">${delta}</span>
+        </div>`;
+    }).join("");
+  }
+  const tpl = `
+    <div class="modal-header">
+      <h2>Cola offline (${state.queue.length})</h2>
+      <div class="sub">${navigator.onLine ? "Online · listas para sincronizar" : "Sin conexión · esperando red"}</div>
+    </div>
+    <div class="modal-body">${bodyHtml}</div>
+    <div class="modal-footer">
+      <button class="ghost" data-close>Cerrar</button>
+      <button class="primary" id="btnSync" ${(!navigator.onLine || state.queue.length === 0) ? "disabled" : ""}>Sincronizar ahora</button>
+    </div>`;
+  const modal = openModal(tpl);
+  const btn = modal.querySelector("#btnSync");
+  if (btn) btn.addEventListener("click", async () => {
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner"></span> ...';
+    await autoSync(); closeModal();
+  });
+}
+
+/* ============ LISTA + BUSCADOR CON SUGERENCIAS ============ */
+const productListEl = document.getElementById("productList");
+const searchInput = document.getElementById("searchInput");
+const suggestionsEl = document.getElementById("suggestions");
+const listMeta = document.getElementById("listMeta");
+const snapshotBanner = document.getElementById("snapshotBanner");
+
+// Listener con debounce ligero (50ms) para no renderizar 3 veces por tecla
+let _searchDebounce = null;
+function onSearchChange() {
+  if (_searchDebounce) clearTimeout(_searchDebounce);
+  _searchDebounce = setTimeout(() => {
+    state.filtro = searchInput.value.toLowerCase().trim();
+    renderSuggestions();
+    renderList();
+  }, 50);
+}
+// Solo "input" es necesario en navegadores modernos. Mantenemos "change" como red de seguridad.
+searchInput.addEventListener("input", onSearchChange);
+searchInput.addEventListener("change", onSearchChange);
+searchInput.addEventListener("focus", renderSuggestions);
+searchInput.addEventListener("blur", () => {
+  // delay para permitir tap en sugerencia
+  setTimeout(() => suggestionsEl.classList.remove("visible"), 200);
+});
+
+document.querySelectorAll("#modeToggle button").forEach(b => {
+  b.addEventListener("click", () => {
+    state.modoLista = b.dataset.mode;
+    document.querySelectorAll("#modeToggle button").forEach(x => x.classList.remove("active"));
+    b.classList.add("active");
+    renderList(); updateCartFab();
+  });
+});
+
+function renderSuggestions() {
+  if (!state.filtro) { suggestionsEl.classList.remove("visible"); return; }
+  const matches = state.inventario
+    .filter(it => String(it.producto || "").toLowerCase().includes(state.filtro)
+              || String(it.codigo || "").toLowerCase().includes(state.filtro))
+    .slice(0, MAX_SUGGESTIONS);
+  if (matches.length === 0) { suggestionsEl.classList.remove("visible"); return; }
+
+  suggestionsEl.innerHTML = matches.map(it => {
+    const ec = estadoOf(it);
+    return `
+      <div class="sug-item" data-codigo="${esc(it.codigo)}" data-nombre="${esc(it.producto)}">
+        <span class="sug-name">${highlight(it.producto, state.filtro)}</span>
+        <span class="sug-stock ${ec}">${it.cantidad} ${esc(it.unidad || "")}</span>
+      </div>`;
+  }).join("");
+
+  suggestionsEl.querySelectorAll(".sug-item").forEach(el => {
+    el.addEventListener("mousedown", e => e.preventDefault()); // evita blur antes del click
+    el.addEventListener("click", () => {
+      const nombre = el.dataset.nombre;
+      searchInput.value = nombre;
+      state.filtro = nombre.toLowerCase();
+      suggestionsEl.classList.remove("visible");
+      renderList();
+      // scroll al item
+      const li = productListEl.querySelector(`li[data-codigo="${CSS.escape(el.dataset.codigo)}"]`);
+      if (li) li.scrollIntoView({ behavior: "smooth", block: "center" });
+    });
+  });
+  suggestionsEl.classList.add("visible");
+}
+
+function highlight(text, query) {
+  const t = String(text || "");
+  if (!query) return esc(t);
+  const idx = t.toLowerCase().indexOf(query);
+  if (idx < 0) return esc(t);
+  return esc(t.slice(0, idx)) + "<mark>" + esc(t.slice(idx, idx + query.length)) + "</mark>" + esc(t.slice(idx + query.length));
+}
+
+async function refreshList() {
+  if (!navigator.onLine) { loadFromSnapshotIntoUI(true); return; }
+  productListEl.innerHTML = '<li class="empty">Cargando...</li>';
+  try {
+    const r = await api("list");
+    if (r.ok) {
+      state.inventario = r.items;
+      saveSnapshot();
+      snapshotBanner.style.display = "none";
+      renderList(); setOnline(true);
+    } else {
+      productListEl.innerHTML = `<li class="empty">Error: ${esc(r.error)}</li>`;
+    }
+  } catch (e) {
+    setOnline(false);
+    loadFromSnapshotIntoUI(true);
+  }
+}
+
+function loadFromSnapshotIntoUI(showBanner) {
+  const snap = loadSnapshot();
+  if (!snap) {
+    productListEl.innerHTML = `<li class="empty">Sin conexión y sin datos guardados.<br>Conéctate al menos una vez para cargar el inventario.</li>`;
+    snapshotBanner.style.display = "none"; return;
+  }
+  state.inventario = snap.items;
+  if (showBanner) {
+    snapshotBanner.textContent = `Modo offline · datos del ${new Date(snap.ts).toLocaleString()}`;
+    snapshotBanner.style.display = "";
+  } else { snapshotBanner.style.display = "none"; }
+  renderList();
+}
+
+function renderList() {
+  const items = state.inventario.filter(it =>
+    !state.filtro || String(it.producto || "").toLowerCase().includes(state.filtro)
+                  || String(it.codigo || "").toLowerCase().includes(state.filtro)
+  );
+  listMeta.textContent = `${items.length} de ${state.inventario.length}`;
+  if (items.length === 0) {
+    productListEl.innerHTML = '<li class="empty">Sin resultados</li>'; return;
+  }
+  productListEl.innerHTML = items.map(it => {
+    const ec = estadoOf(it);
+    const nameHtml = state.filtro ? highlight(it.producto, state.filtro) : esc(it.producto);
+    if (state.modoLista === "directo") {
+      return `<li class="estado-${ec}" data-codigo="${esc(it.codigo)}">
+        <div class="product-info">
+          <div class="product-name">${nameHtml}</div>
+          <div class="product-qty">Stock: <span class="qty-num">${it.cantidad}</span> ${esc(it.unidad || "")}</div>
+        </div>
+        <div class="qty-actions">
+          <button class="btn-minus" data-action="minus">−</button>
+          <button class="btn-plus" data-action="plus">+</button>
+        </div>
+      </li>`;
+    } else {
+      return `<li class="estado-${ec}" data-codigo="${esc(it.codigo)}">
+        <div class="product-info">
+          <div class="product-name">${nameHtml}</div>
+          <div class="product-qty">Stock: <span class="qty-num">${it.cantidad}</span> ${esc(it.unidad || "")}</div>
+        </div>
+        <div class="qty-actions">
+          <button class="btn-add primary" data-action="add">+ Carrito</button>
+        </div>
+      </li>`;
+    }
+  }).join("");
+  attachListHandlers(items);
+}
+
+function estadoOf(it) {
+  if (it.cantidad <= it.critico) return "CRITICO";
+  if (it.cantidad <= it.bajo) return "BAJO";
+  return "NORMAL";
+}
+
+function attachListHandlers(items) {
+  // Construir índice por código para emparejar DOM con item correcto
+  // (evita asumir orden idéntico cuando hay re-renders concurrentes)
+  const byCode = new Map();
+  items.forEach(it => byCode.set(String(it.codigo || ""), it));
+
+  // Solo li con data-codigo (NO los <li class="empty">)
+  productListEl.querySelectorAll("li[data-codigo]").forEach(li => {
+    const code = li.getAttribute("data-codigo");
+    const item = byCode.get(code);
+    if (!item) return; // defensa: no enganchar si no hay match
+
+    if (state.modoLista === "directo") {
+      const minusBtn = li.querySelector('[data-action="minus"]');
+      const plusBtn  = li.querySelector('[data-action="plus"]');
+      if (minusBtn) bindTapAndLongPress(minusBtn, () => directMove(item, "salida", 1),  () => openCustomQtyModal(item, "salida"));
+      if (plusBtn)  bindTapAndLongPress(plusBtn,  () => directMove(item, "entrada", 1), () => openCustomQtyModal(item, "entrada"));
+    } else {
+      const addBtn = li.querySelector('[data-action="add"]');
+      if (addBtn) addBtn.addEventListener("click", () => {
+        addToCart(item, 1, "salida");
+        toast(`+ ${item.producto}`, "info", 1000);
+      });
+    }
+  });
+}
+
+function bindTapAndLongPress(el, onTap, onLong) {
+  let timer = null, triggered = false;
+  el.addEventListener("pointerdown", () => {
+    triggered = false;
+    timer = setTimeout(() => { triggered = true; if (navigator.vibrate) navigator.vibrate(40); onLong(); }, LONG_PRESS_MS);
+  });
+  const cancel = () => { if (timer) { clearTimeout(timer); timer = null; } };
+  el.addEventListener("pointerup", () => { cancel(); if (!triggered) onTap(); });
+  el.addEventListener("pointerleave", cancel);
+  el.addEventListener("pointercancel", cancel);
+}
+
+async function directMove(item, tipo, cantidad) {
+  if (!item.codigo) {
+    toast("Producto sin código. Agrégale uno en el Sheet.", "error", 2500);
+    return;
+  }
+  const r = await tryMove(item.codigo, tipo, cantidad, item);
+  // Truncar nombre largo para que el toast no se desborde
+  const nombre = item.producto.length > 20 ? item.producto.slice(0, 18) + "…" : item.producto;
+  if (r.success) {
+    if (navigator.vibrate) navigator.vibrate(40);
+    renderList();
+    if (r.queued) {
+      toast(`${nombre} en cola · Stock: ${r.stockEstimado}`, "warn", 1500);
+    } else {
+      const txt = `✓ ${nombre} ${tipo === "entrada" ? "+" : "−"}${cantidad} · Stock: ${r.stockNuevo}`;
+      if (r.filaMovimiento) {
+        toastAction(txt, "success", "Deshacer", () => {
+          performUndo(r.filaMovimiento, r.codigo, item.producto);
+        });
+      } else {
+        toast(txt, "success", 1500);
+      }
+    }
+  } else { toast(`${nombre}: ${r.error}`, "error", 2500); }
+}
+
+function openCustomQtyModal(item, tipoDefault) {
+  if (!item.codigo) { toast("Producto sin código", "error"); return; }
+  openMovementModal(item, item.codigo);
+  setTimeout(() => {
+    document.querySelectorAll("#typeToggle button").forEach(b => {
+      b.classList.toggle("active", b.dataset.tipo === tipoDefault);
+    });
+  }, 10);
+}
+
+/* ============ CARRITO ============ */
+/* ============ ENFRIAMIENTO DEL BOTON CONFIRMAR ============
+ * Tras confirmar un movimiento hay que esperar CONFIRM_COOLDOWN_MS
+ * antes de poder confirmar otro. Agregar al carrito NO tiene limite.
+ * Vive en localStorage: en iPhone cada tag recarga la pagina, asi que
+ * un contador en memoria se perderia justo cuando importa. */
+const CONFIRM_KEY = "inv_confirm_cd_v1";
+const CONFIRM_COOLDOWN_MS = 15000;
+
+function confirmCooldownRestante() {
+  const t = loadJSON(CONFIRM_KEY, 0);
+  if (!t) return 0;
+  const resta = CONFIRM_COOLDOWN_MS - (Date.now() - t);
+  return resta > 0 ? resta : 0;
+}
+function marcarConfirm() { saveJSON(CONFIRM_KEY, Date.now()); }
+
+/* Bloquea un boton mientras dure el enfriamiento, con cuenta regresiva */
+function vigilarBotonConfirmar(btn, textoNormal) {
+  if (!btn) return;
+  const tick = () => {
+    if (!document.body.contains(btn)) { clearInterval(timer); return; }
+    if (btn.dataset.busy === "1") return;   // operacion en curso: no pisar el texto
+    const resta = confirmCooldownRestante();
+    if (resta > 0) {
+      btn.disabled = true;
+      btn.textContent = `Espera ${Math.ceil(resta / 1000)} s`;
+    } else {
+      btn.disabled = false;
+      btn.textContent = textoNormal;
+      clearInterval(timer);
+    }
+  };
+  const timer = setInterval(tick, 500);
+  tick();
+}
+
+function addToCart(item, cantidad = 1, tipo = "salida") {
+  if (!item.codigo) { toast("Sin código no se puede agregar", "error"); return { ok: false }; }
+  const solicitante = state.personaActiva;
+  touchPersonaActivity();
+  // Agrupa solo si mismo código + tipo + misma persona
+  const ex = state.carrito.find(x =>
+    x.codigo === item.codigo && x.tipo === tipo && x.solicitante === solicitante
+  );
+  if (ex) ex.cantidad += cantidad;
+  else state.carrito.push({ codigo: item.codigo, producto: item.producto, cantidad, tipo, solicitante });
+  saveCart(); updateCartFab();
+  return { ok: true };
+}
+function updateCartFab() {
+  const fab = document.getElementById("cartFab");
+  const isList = document.getElementById("panelList").classList.contains("active");
+  const show = isList && state.modoLista === "carrito" && state.carrito.length > 0;
+  fab.style.display = show ? "flex" : "none";
+  document.getElementById("cartCount").textContent = state.carrito.length;
+}
+document.getElementById("cartFab").addEventListener("click", openCartModal);
+
+/* ============ CATEGORÍAS DE SOLICITANTE ============ */
+const CATEGORIAS_SOLICITANTE = [
+  {
+    key: "ajustadores", label: "Ajustadores", conNombre: true,
+    grupos: [
+      { nombre: "Línea", personas: ["John Castaneda","Nelson Mantilla","Luis Miguel","Brayan Garcia","Brayan Vanegas","Manuel Bello","Jorge Quintana","Jeisson Gonzales"] },
+      { nombre: "Ajustadores", personas: ["Jose Malaver","Daniel Cardenas","Ivan Salgado","Leandro","Jose Albino","Alexander Toro","Jose Mancipe","Donny Vargas","Miguel Cordero","Daniel Olaya","Jhonatan Pinzon"] }
+    ]
+  },
+  { key: "cnc",          label: "CNC",          conNombre: false },
+  { key: "oficina",      label: "Oficina",      conNombre: false },
+  { key: "terminados",   label: "Terminados",   conNombre: false },
+  { key: "chequeo",      label: "Chequeo",      conNombre: false },
+  { key: "acarreadores", label: "Acarreadores", conNombre: false },
+  { key: "indeterminado",label: "Indeterminado",conNombre: false },
+  { key: "practicante",  label: "Practicante",  conNombre: false }
+];
+
+function openChangePersonaModal(onConfirm) {
+  const tpl = `
+    <div class="modal-header">
+      <h2>¿Quién recibe?</h2>
+      <div class="sub">Selecciona el área</div>
+    </div>
+    <div class="modal-body">
+      <div class="persona-cat-grid" id="catGrid">
+        ${CATEGORIAS_SOLICITANTE.map(c =>
+          `<button class="persona-cat-btn" data-key="${c.key}">${esc(c.label)}</button>`
+        ).join("")}
+      </div>
+      <div id="catNombreWrap" style="display:none;">
+        <button class="ghost" id="btnVolverCat" style="margin-bottom:10px;">← Volver</button>
+        <label style="font-size:12px;color:var(--text-muted);font-weight:600;text-transform:uppercase;letter-spacing:0.05em;display:block;margin-bottom:6px;">Selecciona la persona</label>
+        <select id="catNombreSelect"></select>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="ghost" data-close>Cancelar</button>
+      <button class="primary" id="btnConfirmCat" style="display:none;">Confirmar</button>
+    </div>`;
+  const m = openModal(tpl);
+
+  const grid = m.querySelector("#catGrid");
+  const wrap = m.querySelector("#catNombreWrap");
+  const select = m.querySelector("#catNombreSelect");
+  const btnConfirm = m.querySelector("#btnConfirmCat");
+
+  const finalize = (valor) => {
+    setPersonaActiva(valor);
+    // FIX: reasignar items del carrito que quedaron "Sin asignar"
+    // (caso: usuario agrega productos ANTES de elegir persona)
+    let reasignados = 0;
+    state.carrito.forEach(it => {
+      if (!it.solicitante) { it.solicitante = valor; reasignados++; }
+    });
+    if (reasignados > 0) saveCart();
+    closeModalSpecific(m);
+    onConfirm && onConfirm();
+  };
+
+  grid.querySelectorAll(".persona-cat-btn").forEach(btn => {
+    btn.addEventListener("click", () => {
+      const cat = CATEGORIAS_SOLICITANTE.find(c => c.key === btn.dataset.key);
+      if (!cat.conNombre) {
+        finalize(cat.label);
+        return;
+      }
+      // Mostrar selector de nombre con grupos (optgroup nativo)
+      select.innerHTML = cat.grupos.map(g =>
+        `<optgroup label="${esc(g.nombre)}">` +
+        g.personas.map(p => `<option value="${esc(p)}">${esc(p)}</option>`).join("") +
+        `</optgroup>`
+      ).join("");
+      grid.style.display = "none";
+      wrap.style.display = "block";
+      btnConfirm.style.display = "block";
+    });
+  });
+
+  m.querySelector("#btnVolverCat").addEventListener("click", () => {
+    wrap.style.display = "none";
+    btnConfirm.style.display = "none";
+    grid.style.display = "grid";
+  });
+
+  btnConfirm.addEventListener("click", () => {
+    if (!select.value) { toast("Selecciona una persona", "error"); return; }
+    finalize(select.value);
+  });
+}
+
+function openCartModal() {
+  const personaLabel = state.personaActiva || "Sin asignar";
+  const totalItems = state.carrito.length;
+  const tpl = `
+    <div class="modal-header">
+      <h2>Carrito (${totalItems})</h2>
+      <div class="sub">Edita cantidad o tipo antes de confirmar</div>
+    </div>
+    <div class="cart-persona-bar" id="personaBar">
+      <span class="persona-label">👤 Activo: <strong id="personaActualLabel">${esc(personaLabel)}</strong></span>
+      <button id="btnCambiarPersona">Cambiar persona</button>
+    </div>
+    <div class="modal-body" id="cartBody"></div>
+    <div class="modal-footer">
+      <button class="ghost" id="btnClearCart">Vaciar</button>
+      <button class="primary" id="btnConfirmCart">Confirmar todo · ${totalItems}</button>
+    </div>`;
+  const modal = openModal(tpl);
+  renderCartBody(modal);
+
+  modal.querySelector("#btnCambiarPersona").addEventListener("click", () => {
+    openChangePersonaModal(() => {
+      // Actualizar label sin re-abrir el modal
+      const lbl = modal.querySelector("#personaActualLabel");
+      if (lbl) lbl.textContent = state.personaActiva || "Sin asignar";
+    });
+  });
+  modal.querySelector("#btnClearCart").addEventListener("click", () => {
+    if (confirm("¿Vaciar el carrito?")) {
+      state.carrito = []; saveCart(); updateCartFab(); closeModal();
+    }
+  });
+  modal.querySelector("#btnConfirmCart").addEventListener("click", () => {
+    if (confirmCooldownRestante() > 0) return;
+    commitCart(modal);
+  });
+  vigilarBotonConfirmar(modal.querySelector("#btnConfirmCart"), `Confirmar todo · ${totalItems}`);
+}
+function renderCartBody(modal) {
+  const body = modal.querySelector("#cartBody");
+  if (state.carrito.length === 0) { body.innerHTML = '<div class="empty">Carrito vacío</div>'; return; }
+
+  // Agrupar por solicitante preservando orden de aparición
+  const grupos = [];
+  const seenPersonas = [];
+  state.carrito.forEach((it, idx) => {
+    const p = it.solicitante || "";
+    if (!seenPersonas.includes(p)) {
+      seenPersonas.push(p);
+      grupos.push({ persona: p, items: [] });
+    }
+    grupos.find(g => g.persona === p).items.push({ ...it, _idx: idx });
+  });
+
+  body.innerHTML = grupos.map(g => {
+    const label = g.persona || "Sin asignar";
+    const itemsHtml = g.items.map(it => `
+      <div class="cart-item" data-idx="${it._idx}">
+        <div class="info">
+          <div class="name">${esc(it.producto)}</div>
+          <div class="small mono">${esc(it.codigo)}</div>
+        </div>
+        <button class="type-pill ${it.tipo}" data-toggle-type>${it.tipo === "salida" ? "↓ SAL" : "↑ ENT"}</button>
+        <input class="qty-input" type="number" min="1" value="${it.cantidad}" data-qty>
+        <button class="delete" data-delete>✕</button>
+      </div>`).join("");
+    return `
+      <div class="cart-section-header">${esc(label)}</div>
+      ${itemsHtml}`;
+  }).join("");
+
+  // Listeners usando idx global (referencia al array original)
+  body.querySelectorAll(".cart-item").forEach(row => {
+    const idx = Number(row.dataset.idx);
+    row.querySelector("[data-toggle-type]").addEventListener("click", () => {
+      state.carrito[idx].tipo = state.carrito[idx].tipo === "salida" ? "entrada" : "salida";
+      saveCart(); renderCartBody(modal);
+    });
+    row.querySelector("[data-qty]").addEventListener("change", e => {
+      const v = Math.max(1, Number(e.target.value) || 1);
+      state.carrito[idx].cantidad = v; e.target.value = v; saveCart();
+    });
+    row.querySelector("[data-delete]").addEventListener("click", () => {
+      state.carrito.splice(idx, 1); saveCart(); updateCartFab(); renderCartBody(modal);
+      if (state.carrito.length === 0) closeModal();
+    });
+  });
+}
+
+async function commitCart(modal) {
+  const btn = modal.querySelector("#btnConfirmCart");
+  btn.disabled = true;
+  btn.dataset.busy = "1";   // evita que la cuenta regresiva pise el progreso
+  marcarConfirm();
+  let exitos = 0, encolados = 0;
+  for (let i = 0; i < state.carrito.length; ) {
+    const it = state.carrito[i];
+    const opId = newOpId();   // mismo id para el intento y para el reintento
+    btn.innerHTML = `<span class="spinner"></span> ${i+1}/${state.carrito.length}`;
+    if (!navigator.onLine) {
+      enqueue("move", { codigo: it.codigo, tipo: it.tipo, cantidad: it.cantidad, solicitante: it.solicitante || state.personaActiva || "", opId });
+      const itemRef = state.inventario.find(x => x.codigo === it.codigo);
+      if (itemRef) itemRef.cantidad += (it.tipo === "entrada" ? it.cantidad : -it.cantidad);
+      state.carrito.splice(i, 1); saveCart(); encolados++; continue;
+    }
+    try {
+      const r = await api("move", { codigo: it.codigo, tipo: it.tipo, cantidad: it.cantidad, solicitante: it.solicitante || state.personaActiva || "", opId });
+      if (r.ok) {
+        const itemRef = state.inventario.find(x => x.codigo === it.codigo);
+        if (itemRef) itemRef.cantidad = r.stockNuevo;
+        state.carrito.splice(i, 1); saveCart(); exitos++;
+      } else {
+        const decision = await askFailureDecision(it, r);
+        if (decision === "skip") i++;
+        else if (decision === "abort") break;
+      }
+    } catch {
+      enqueue("move", { codigo: it.codigo, tipo: it.tipo, cantidad: it.cantidad, solicitante: it.solicitante || state.personaActiva || "", opId });
+      const itemRef = state.inventario.find(x => x.codigo === it.codigo);
+      if (itemRef) itemRef.cantidad += (it.tipo === "entrada" ? it.cantidad : -it.cantidad);
+      state.carrito.splice(i, 1); saveCart(); encolados++; setOnline(false);
+    }
+  }
+  btn.dataset.busy = "";
+  saveSnapshot(); closeModal(); updateCartFab(); renderList();
+  let msg = `✓ ${exitos} aplicados`;
+  if (encolados) msg += ` · ${encolados} en cola`;
+  if (state.carrito.length) msg += ` · ${state.carrito.length} pendientes`;
+  toast(msg, encolados > 0 ? "warn" : "success", 3500);
+}
+
+function askFailureDecision(item, errResp) {
+  return new Promise(resolve => {
+    const motivo = errResp.stockInsuficiente
+      ? `Stock insuficiente (disponible: ${errResp.stockAnterior})`
+      : (errResp.notFound ? "Código no encontrado" : (errResp.error || "Error"));
+    const tpl = `
+      <div class="modal-header">
+        <h2>Falla en un item</h2>
+        <div class="sub">${esc(item.producto)} · ${item.tipo} ${item.cantidad}</div>
+      </div>
+      <div class="modal-body">
+        <div class="info-block" style="background:var(--red-bg);border-color:#e39a8f;">${esc(motivo)}</div>
+        <p style="font-size:14px;color:var(--text-muted);">¿Qué hacer con este item?</p>
+      </div>
+      <div class="modal-footer" style="flex-direction:column;gap:8px;">
+        <button class="primary" data-decision="retry">Reintentar</button>
+        <button data-decision="skip">Saltar este (continuar)</button>
+        <button class="danger" data-decision="abort">Cancelar resto</button>
+      </div>`;
+    const m = openModal(tpl, { dismissable: false });
+    m.querySelectorAll("[data-decision]").forEach(b => {
+      b.addEventListener("click", () => { closeModalSpecific(m); resolve(b.dataset.decision); });
+    });
+  });
+}
+
+/* ============ MODAL HELPERS ============ */
+const _modalStack = [];
+function openModal(html, opts = {}) {
+  const root = document.getElementById("modalRoot");
+  const bd = document.createElement("div"); bd.className = "modal-backdrop";
+  const m = document.createElement("div"); m.className = "modal"; m.innerHTML = html;
+  bd.appendChild(m); root.appendChild(bd); _modalStack.push(bd);
+  const close = () => closeModalSpecific(m);
+  m.querySelectorAll("[data-close]").forEach(el => el.addEventListener("click", close));
+  if (opts.dismissable !== false) bd.addEventListener("click", e => { if (e.target === bd) close(); });
+  return m;
+}
+function closeModal() {
+  const top = _modalStack.pop();
+  if (top) top.remove();
+
+}
+function closeModalSpecific(m) {
+  const bd = m.parentElement;
+  const idx = _modalStack.indexOf(bd);
+  if (idx >= 0) _modalStack.splice(idx, 1);
+  if (bd) bd.remove();
+}
+
+/* ============ UTIL ============ */
+function esc(s) {
+  return String(s == null ? "" : s)
+    .replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;")
+    .replace(/"/g,"&quot;").replace(/'/g,"&#39;");
+}
+
+/* ============ PERSONA ACTIVA: persistencia + expiración ============ */
+const PERSONA_KEY = "inv_persona_v1";
+const PERSONA_TTL_MS = 15 * 60 * 1000;   // 15 minutos
+let _personaTimer = null;
+
+function setPersonaActiva(valor) {
+  state.personaActiva = valor || "";
+  if (valor) saveJSON(PERSONA_KEY, { valor, ts: Date.now() });
+  else localStorage.removeItem(PERSONA_KEY);
+  armPersonaExpiry();
+  updatePersonaChip();
+}
+function restorePersonaActiva() {
+  const saved = loadJSON(PERSONA_KEY, null);
+  if (saved && saved.valor && (Date.now() - saved.ts) < PERSONA_TTL_MS) {
+    state.personaActiva = saved.valor;
+    armPersonaExpiry();
+  } else {
+    localStorage.removeItem(PERSONA_KEY);
+  }
+  updatePersonaChip();
+}
+function armPersonaExpiry() {
+  clearTimeout(_personaTimer);
+  const saved = loadJSON(PERSONA_KEY, null);
+  if (!saved || !saved.valor) return;
+  const restante = PERSONA_TTL_MS - (Date.now() - saved.ts);
+  if (restante <= 0) { expirePersona(); return; }
+  _personaTimer = setTimeout(expirePersona, restante);
+}
+function expirePersona() {
+  if (!state.personaActiva) return;
+  state.personaActiva = "";
+  localStorage.removeItem(PERSONA_KEY);
+  const lbl = document.querySelector("#personaBar .persona-label strong");
+  if (lbl) lbl.textContent = "Sin asignar";
+  updatePersonaChip();
+  toast("Persona activa expirada (15 min)", "info", 2200);
+}
+function touchPersonaActivity() {
+  if (!state.personaActiva) return;
+  saveJSON(PERSONA_KEY, { valor: state.personaActiva, ts: Date.now() });
+  armPersonaExpiry();
+}
+function updatePersonaChip() {
+  const chip = document.getElementById("personaChip");
+  if (!chip) return;
+  if (state.personaActiva) {
+    chip.textContent = state.personaActiva;
+    chip.classList.add("set");
+    chip.style.display = "inline-block";
+  } else {
+    chip.style.display = "none";
+    chip.classList.remove("set");
+  }
+}
+
+/* ============ JUEGO 2048 (oculto: doble tap al logo) ============ */
+const GAME_NAME_KEY = "inv_game_name_v1";
+const GAME_BEST_KEY = "inv_game_best_v1";
+const G = { tiles: [], score: 0, over: false, won: false, busy: false, nextId: 1 };
+let _gameOverlay = null;
+let _geo = { cell: 0, gap: 8, pad: 8 };
+
+function openGame2048() {
+  if (_gameOverlay) return;
+  const ov = document.createElement("div");
+  ov.className = "game-overlay";
+  ov.innerHTML = `
+    <div class="game-top">
+      <div class="game-title">20<span>48</span></div>
+      <div class="game-scores">
+        <div class="score-box"><div class="lbl">Score</div><div class="val" id="gScore">0</div></div>
+        <div class="score-box"><div class="lbl">Récord</div><div class="val" id="gBest">0</div></div>
+      </div>
+    </div>
+    <div class="game-sub">
+      <div class="game-player" id="gPlayer"></div>
+      <div class="g-actions">
+        <button class="g-btn" id="gRestart">Reiniciar</button>
+        <button class="g-btn danger" id="gExit">Salir</button>
+      </div>
+    </div>
+    <div class="game-board" id="gBoard"></div>`;
+  document.body.appendChild(ov);
+  _gameOverlay = ov;
+
+  ov.querySelector("#gExit").addEventListener("click", exitGame);
+  ov.querySelector("#gRestart").addEventListener("click", () => {
+    if (G.score > 0 && !G.over) {
+      if (!confirm("¿Reiniciar? La partida actual no se guardará.")) return;
+    }
+    startGame();
+  });
+
+  const name = loadJSON(GAME_NAME_KEY, "");
+  if (!name) askGameName(); else startGame();
+}
+
+function askGameName() {
+  const board = _gameOverlay.querySelector("#gBoard");
+  board.innerHTML = `
+    <div class="game-panel">
+      <h3>¿Quién juega?</h3>
+      <div class="game-name-form">
+        <input id="gNameInput" type="text" maxlength="20" placeholder="Tu nombre">
+        <button class="primary" id="gNameOk">Jugar</button>
+      </div>
+      <div class="top3-note">Tu score máximo queda en el ranking de practicantes.</div>
+    </div>`;
+  const input = board.querySelector("#gNameInput");
+  setTimeout(() => input.focus(), 150);
+  const go = () => {
+    const n = input.value.trim();
+    if (!n) { toast("Escribe tu nombre", "error", 1500); return; }
+    saveJSON(GAME_NAME_KEY, n);
+    startGame();
+  };
+  board.querySelector("#gNameOk").addEventListener("click", go);
+  input.addEventListener("keydown", e => { if (e.key === "Enter") go(); });
+}
+
+function playerName() { return loadJSON(GAME_NAME_KEY, ""); }
+function bestFor(name) { const m = loadJSON(GAME_BEST_KEY, {}); return m[name] || 0; }
+function setBestFor(name, s) { const m = loadJSON(GAME_BEST_KEY, {}); m[name] = s; saveJSON(GAME_BEST_KEY, m); }
+
+/* ---- geometría ---- */
+function computeGeo() {
+  const board = _gameOverlay.querySelector("#gBoard");
+  const inner = board.clientWidth - _geo.pad * 2;
+  _geo.cell = (inner - _geo.gap * 3) / 4;
+}
+function xyOf(r, c) {
+  return {
+    x: _geo.pad + c * (_geo.cell + _geo.gap),
+    y: _geo.pad + r * (_geo.cell + _geo.gap)
+  };
+}
+function applyGeom(t) {
+  const { x, y } = xyOf(t.r, t.c);
+  const fs = t.v < 128 ? _geo.cell * 0.42 : t.v < 1024 ? _geo.cell * 0.34 : _geo.cell * 0.27;
+  t.el.style.width = _geo.cell + "px";
+  t.el.style.height = _geo.cell + "px";
+  t.el.style.fontSize = fs + "px";
+  t.el.style.transform = `translate(${x}px, ${y}px)`;
+}
+
+/* ---- tablero / tiles ---- */
+function initBoard() {
+  const board = _gameOverlay.querySelector("#gBoard");
+  board.innerHTML = "";
+  for (let i = 0; i < 16; i++) {
+    const cell = document.createElement("div");
+    cell.className = "cell";
+    board.appendChild(cell);
+  }
+  computeGeo();
+}
+
+function classFor(v) { return v <= 2048 ? "t" + v : "tsuper"; }
+
+function createTile(v, r, c, extra) {
+  const board = _gameOverlay.querySelector("#gBoard");
+  const t = { id: G.nextId++, v, r, c, el: document.createElement("div") };
+  t.el.className = "tile " + classFor(v) + (extra ? " " + extra : "");
+  t.el.textContent = v;
+  applyGeom(t);
+  board.appendChild(t.el);
+  G.tiles.push(t);
+  return t;
+}
+
+function matrixOf() {
+  const m = [[null,null,null,null],[null,null,null,null],[null,null,null,null],[null,null,null,null]];
+  G.tiles.forEach(t => { m[t.r][t.c] = t; });
+  return m;
+}
+
+function startGame() {
+  G.tiles = []; G.score = 0; G.over = false; G.won = false; G.busy = false;
+  initBoard();
+  spawnTile(); spawnTile();
+  updateScores();
+  _gameOverlay.querySelector("#gPlayer").innerHTML =
+    `Jugando: <strong>${esc(playerName())}</strong>`;
+}
+
+function spawnTile() {
+  const m = matrixOf();
+  const empty = [];
+  for (let r = 0; r < 4; r++) for (let c = 0; c < 4; c++) if (!m[r][c]) empty.push([r, c]);
+  if (!empty.length) return;
+  const [r, c] = empty[Math.floor(Math.random() * empty.length)];
+  createTile(Math.random() < 0.9 ? 2 : 4, r, c, "new");
+}
+
+function updateScores() {
+  _gameOverlay.querySelector("#gScore").textContent = G.score;
+  _gameOverlay.querySelector("#gBest").textContent =
+    Math.max(bestFor(playerName()), G.score);
+}
+
+/* ---- movimiento con animación real ----
+   Fase 1: deslizar tiles a su destino (transición CSS)
+   Fase 2 (tras 140ms): resolver fusiones, spawn, score      */
+function lineFor(dir, i) {
+  const out = [];
+  for (let k = 0; k < 4; k++) {
+    if (dir === 0) out.push({ r: i, c: k });          // izquierda
+    else if (dir === 1) out.push({ r: i, c: 3 - k }); // derecha
+    else if (dir === 2) out.push({ r: k, c: i });     // arriba
+    else out.push({ r: 3 - k, c: i });                // abajo
+  }
+  return out;
+}
+
+function moveGame(dir) {
+  if (G.over || G.busy || !_gameOverlay) return;
+  const m = matrixOf();
+  let moved = false;
+  const merges = [];   // {a, b, r, c, v}
+
+  for (let i = 0; i < 4; i++) {
+    const cells = lineFor(dir, i);
+    let slot = 0;
+    let prev = null;   // {tile, slot, merged}
+    for (const cell of cells) {
+      const t = m[cell.r][cell.c];
+      if (!t) continue;
+      if (prev && !prev.merged && prev.tile.v === t.v) {
+        const dest = cells[prev.slot];
+        merges.push({ a: prev.tile, b: t, r: dest.r, c: dest.c, v: t.v * 2 });
+        t.r = dest.r; t.c = dest.c;        // se desliza encima del par
+        prev.merged = true;
+        moved = true;
+      } else {
+        const dest = cells[slot];
+        if (t.r !== dest.r || t.c !== dest.c) {
+          t.r = dest.r; t.c = dest.c; moved = true;
+        }
+        prev = { tile: t, slot, merged: false };
+        slot++;
+      }
+    }
+  }
+
+  if (!moved) return;
+  G.busy = true;
+  G.tiles.forEach(applyGeom);   // dispara las transiciones de deslizamiento
+
+  setTimeout(() => {
+    let gained = 0;
+    merges.forEach(mg => {
+      mg.a.el.remove(); mg.b.el.remove();
+      G.tiles = G.tiles.filter(t => t !== mg.a && t !== mg.b);
+      createTile(mg.v, mg.r, mg.c, "merged");
+      gained += mg.v;
+    });
+    G.score += gained;
+    spawnTile();
+    updateScores();
+    G.busy = false;
+
+    if (!G.won && G.tiles.some(t => t.v === 2048)) {
+      G.won = true;
+      toast("¡2048! Puedes seguir jugando", "success", 2500);
+    }
+    if (isGameOver()) endGame();
+  }, 140);
+}
+
+function isGameOver() {
+  const m = matrixOf();
+  for (let r = 0; r < 4; r++) for (let c = 0; c < 4; c++) {
+    if (!m[r][c]) return false;
+    const v = m[r][c].v;
+    if (c < 3 && m[r][c+1] && m[r][c+1].v === v) return false;
+    if (r < 3 && m[r+1][c] && m[r+1][c].v === v) return false;
+  }
+  return true;
+}
+
+async function endGame() {
+  G.over = true;
+  const name = playerName();
+  const prevBest = bestFor(name);
+  const esRecordLocal = G.score > prevBest;
+  if (esRecordLocal) setBestFor(name, G.score);
+
+  let top3 = null;
+  if (navigator.onLine) {
+    try {
+      const r = await api("savegame", { persona: name, score: G.score });
+      if (r.ok) top3 = r.top3 || null;
+    } catch(e) { /* sin red: encolar */ }
+  }
+  if (!top3) {
+    enqueue("savegame", { persona: name, score: G.score });
+    updateConnBadge();
+  }
+
+  const board = _gameOverlay.querySelector("#gBoard");
+  const panel = document.createElement("div");
+  panel.className = "game-panel";
+  panel.innerHTML = `
+    <h3>${esRecordLocal ? "Nuevo récord personal" : "Fin del juego"}</h3>
+    <div class="final-score">Score: <strong>${G.score}</strong></div>
+    ${top3 ? `<div class="top3">${top3.map((t,i)=>`
+      <div class="top3-row"><span><span class="pos">${i+1}.</span>${esc(t.nombre)}</span><span>${t.score}</span></div>`).join("")}</div>`
+      : `<div class="top3-note">Sin conexión: tu score quedó en cola y se subirá al ranking automáticamente.</div>`}
+    <div class="top3-note">El ranking completo está en la hoja Leaderboard del Google Sheet.</div>
+    <button class="primary" id="gAgain" style="min-width:180px;">Jugar de nuevo</button>
+    <button class="ghost" id="gClose" style="min-width:180px;">Salir</button>`;
+  board.appendChild(panel);
+  panel.querySelector("#gAgain").addEventListener("click", startGame);
+  panel.querySelector("#gClose").addEventListener("click", exitGame);
+}
+
+function exitGame() {
+  if (!G.over && G.score > 0) {
+    if (!confirm("¿Salir? La partida actual no se guardará.")) return;
+  }
+  _gameOverlay.remove(); _gameOverlay = null;
+}
+
+/* Controles: swipe + teclado + resize */
+let _tSX = 0, _tSY = 0;
+document.addEventListener("touchstart", e => {
+  if (!_gameOverlay || G.over) return;
+  const t = e.touches[0]; _tSX = t.clientX; _tSY = t.clientY;
+}, { passive: true });
+document.addEventListener("touchend", e => {
+  if (!_gameOverlay || G.over) return;
+  if (!e.target.closest(".game-board")) return;
+  const t = e.changedTouches[0];
+  const dx = t.clientX - _tSX, dy = t.clientY - _tSY;
+  if (Math.max(Math.abs(dx), Math.abs(dy)) < 24) return;
+  if (Math.abs(dx) > Math.abs(dy)) moveGame(dx > 0 ? 1 : 0);
+  else moveGame(dy > 0 ? 3 : 2);
+}, { passive: true });
+document.addEventListener("keydown", e => {
+  if (!_gameOverlay) return;
+  const map = { ArrowLeft:0, ArrowRight:1, ArrowUp:2, ArrowDown:3 };
+  if (map[e.key] !== undefined) { e.preventDefault(); moveGame(map[e.key]); }
+});
+window.addEventListener("resize", () => {
+  if (!_gameOverlay || !G.tiles.length) return;
+  computeGeo();
+  G.tiles.forEach(applyGeom);
+});
+
+/* Doble tap al logo abre el juego */
+(function(){
+  const logo = document.getElementById("appLogo");
+  let taps = 0, timer = null;
+  logo.addEventListener("click", () => {
+    taps++;
+    clearTimeout(timer);
+    if (taps >= 2) { taps = 0; openGame2048(); return; }
+    timer = setTimeout(() => { taps = 0; }, 400);
+  });
+})();
+
+/* Chip de persona activa en el header: tap para cambiar/asignar */
+document.getElementById("personaChip").addEventListener("click", () => {
+  openChangePersonaModal(() => {});
+});
+
+/* ============ TAGS NFC: lectura de parámetros URL ============
+ * Tag de carnet (persona):  ?persona=Nelson%20Mantilla
+ * Tag de producto:          ?codigo=40050599&cantidad=1&tipo=salida
+ * (tipo es opcional, por defecto "salida")
+ * Ambos pueden combinarse en la misma URL si algún día se arma
+ * un tag compuesto, aunque el flujo normal es tocar cada tag por separado.
+ */
+async function processIncomingParams() {
+  const params = new URLSearchParams(location.search);
+  const persona  = params.get("persona");
+  const codigo   = params.get("codigo");
+  const cantidad = params.get("cantidad");
+  const tipo     = params.get("tipo");
+
+  if (!persona && !codigo) return;
+
+  // Limpiar la URL de inmediato para que un refresh no repita la acción
+  history.replaceState(null, "", location.pathname);
+
+  if (persona) {
+    setPersonaActiva(persona);
+    toast(`Persona activa: ${persona}`, "success", 2000);
+  }
+  if (codigo) {
+    await addTagToCart(
+      codigo,
+      cantidad ? Number(cantidad) : 1,
+      tipo === "entrada" ? "entrada" : "salida"
+    );
+  }
+}
+
+/* Toque de tag de producto: agrega directo al carrito, sin modal.
+   Pensado para escaneo en serie (varios tags seguidos, cada uno
+   suma al carrito con un toast rápido; se confirma todo al final
+   desde el FAB del carrito). */
+async function addTagToCart(codigo, cantidad, tipo) {
+  let item = null;
+  if (navigator.onLine) {
+    try {
+      const r = await api("lookup", { codigo });
+      if (r.ok) item = r.item;
+    } catch (e) { setOnline(false); }
+  }
+  if (!item) {
+    const snap = loadSnapshot();
+    item = snap ? snap.items.find(it => String(it.codigo).trim() === String(codigo).trim()) : null;
+  }
+  if (!item) { toast(`Código no encontrado: ${codigo}`, "error", 2200); return; }
+
+  const res = addToCart(item, cantidad, tipo);
+  if (!res.ok) return { ok: false, producto: item.producto };
+
+  if (navigator.vibrate) navigator.vibrate(35);
+  const signo = tipo === "entrada" ? "+" : "−";
+  toast(`${signo}${cantidad} ${item.producto} · Carrito: ${state.carrito.length}`, "success", 1400);
+  return { ok: true, producto: item.producto, signo, cantidad };
+}
+
+/* ============ MODO ESCANEO NFC (Web NFC - Android/Chrome) ============
+ * Lee tags en vivo SIN navegar ni abrir pestañas mientras el overlay
+ * está en pantalla. iPhone no soporta Web NFC: ahí el botón no aparece
+ * y aplica el flujo por URL de siempre.
+ * Reutiliza los mismos tags ya grabados (records de tipo URL). */
+let _nfcAbort = null;
+let _scanOverlay = null;
+const _scanSeen = new Map();   // clave -> timestamp (anti doble lectura)
+
+function nfcSupported() { return "NDEFReader" in window; }
+
+function initNfcButton() {
+  if (!nfcSupported()) return;
+  const b = document.getElementById("nfcBtn");
+  b.style.display = "inline-block";
+  b.addEventListener("click", openScanMode);
+}
+
+async function openScanMode() {
+  if (_scanOverlay) return;
+  const ov = document.createElement("div");
+  ov.className = "scan-overlay";
+  ov.innerHTML = `
+    <div class="scan-head">
+      <div class="scan-title">Escaneo NFC</div>
+      <button class="ghost" id="scanClose" style="min-height:36px;padding:6px 14px;font-size:12px;">Cerrar</button>
+    </div>
+    <div class="scan-persona" id="scanPersona"></div>
+    <div class="scan-zone">
+      <div class="zlbl" id="scanStatus">Acerca un tag al telefono</div>
+    </div>
+    <div class="scan-count">Carrito: <strong id="scanCount">0</strong> items</div>
+    <div class="scan-feed" id="scanFeed"></div>
+    <div class="scan-actions">
+      <button class="ghost" id="scanPersonaBtn">Elegir persona</button>
+      <button class="primary" id="scanReview">Revisar carrito</button>
+    </div>`;
+  document.body.appendChild(ov);
+  _scanOverlay = ov;
+  updateScanHeader();
+
+  ov.querySelector("#scanClose").addEventListener("click", closeScanMode);
+  ov.querySelector("#scanReview").addEventListener("click", () => {
+    closeScanMode();
+    openCartModal();
+  });
+  ov.querySelector("#scanPersonaBtn").addEventListener("click", () => {
+    openChangePersonaModal(() => {
+      updateScanHeader();
+      setScanStatus("Persona asignada. Escanea productos.");
+    });
+  });
+
+  try {
+    _nfcAbort = new AbortController();
+    const reader = new NDEFReader();
+    await reader.scan({ signal: _nfcAbort.signal });
+    reader.onreading = (event) => {
+      for (const record of event.message.records) {
+        if (record.recordType === "url") {
+          const url = new TextDecoder().decode(record.data);
+          handleScannedUrl(url);
+        }
+      }
+    };
+    reader.onreadingerror = () => {
+      setScanStatus("Tag ilegible, intenta de nuevo");
+    };
+  } catch (err) {
+    if (err.name === "NotAllowedError") {
+      setScanStatus("Permiso NFC denegado. Activalo en los permisos del sitio.");
+    } else if (err.name === "NotSupportedError" || err.name === "NotReadableError") {
+      setScanStatus("NFC no disponible. Revisa que este activado en Ajustes.");
+    } else {
+      setScanStatus("Error al iniciar NFC: " + err.name);
+    }
+  }
+}
+
+function closeScanMode() {
+  if (_nfcAbort) { _nfcAbort.abort(); _nfcAbort = null; }
+  if (_scanOverlay) { _scanOverlay.remove(); _scanOverlay = null; }
+  _scanSeen.clear();
+}
+
+function setScanStatus(msg) {
+  const el = _scanOverlay && _scanOverlay.querySelector("#scanStatus");
+  if (el) el.textContent = msg;
+}
+
+function updateScanHeader() {
+  if (!_scanOverlay) return;
+  _scanOverlay.querySelector("#scanPersona").innerHTML = state.personaActiva
+    ? `Registrando a <strong>${esc(state.personaActiva)}</strong>`
+    : `Sin persona activa. Toca el tag de un carnet para asignar.`;
+  const totalItems = state.carrito.reduce((a, it) => a + it.cantidad, 0);
+  _scanOverlay.querySelector("#scanCount").textContent = totalItems;
+}
+
+function scanFeedAdd(texto, meta, esPersona) {
+  const feed = _scanOverlay && _scanOverlay.querySelector("#scanFeed");
+  if (!feed) return;
+  const el = document.createElement("div");
+  el.className = "scan-feed-item" + (esPersona ? " persona" : "")
+    + (String(meta).indexOf("repetido") >= 0 ? " dup" : "");
+  el.innerHTML = `<span>${esc(texto)}</span><span class="sfi-meta">${esc(meta)}</span>`;
+  feed.prepend(el);
+  while (feed.children.length > 10) feed.lastChild.remove();
+}
+
+async function handleScannedUrl(urlStr) {
+  let u;
+  try { u = new URL(urlStr); } catch (e) { return; }
+  const persona  = u.searchParams.get("persona");
+  const codigo   = u.searchParams.get("codigo");
+  const cantidad = Number(u.searchParams.get("cantidad")) || 1;
+  const tipo     = u.searchParams.get("tipo") === "entrada" ? "entrada" : "salida";
+
+  // Anti doble lectura: mismo tag ignorado por 1.5 s
+  const clave = persona ? "p:" + persona : "c:" + codigo;
+  const ahora = Date.now();
+  if (_scanSeen.has(clave) && ahora - _scanSeen.get(clave) < 1500) return;
+  _scanSeen.set(clave, ahora);
+
+  if (persona) {
+    setPersonaActiva(persona);
+    if (navigator.vibrate) navigator.vibrate([30, 30, 30]);
+    scanFeedAdd(persona, "persona activa", true);
+    setScanStatus("Persona asignada. Escanea productos.");
+    updateScanHeader();
+    return;
+  }
+  if (codigo) {
+    const res = await addTagToCart(codigo, cantidad, tipo);
+    if (res && res.ok) {
+      scanFeedAdd(res.producto, `${res.signo}${res.cantidad}`, false);
+      setScanStatus("Acerca el siguiente tag");
+    }
+    updateScanHeader();
+  }
+}
+
+/* ============ INIT ============ */
+const APP_VERSION = "3.9";
+document.getElementById("appVersion").textContent = "v" + APP_VERSION;
+loadSnapshot();
+restorePersonaActiva();
+updateConnBadge();
+refreshList();
+initNfcButton();
+processIncomingParams();
+if (navigator.onLine && state.queue.length > 0) setTimeout(autoSync, 800);
+</script>
+</body>
+</html>
